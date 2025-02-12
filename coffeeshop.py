@@ -24,6 +24,7 @@ class OrderAction(Enum):
     ADD = auto()
     REMOVE = auto()
     FINALIZE = auto()
+    UNKNOWN = auto()
 
 class ConversationAI:
     def __init__(self):
@@ -111,7 +112,7 @@ class ConversationAI:
         elif re.match(".*don't\s+(want|like).*", message):
             return (OrderAction.REMOVE, item) if item in MENU else (OrderAction.ADD, "")
 
-        return (OrderAction.ADD, "")
+        return (OrderAction.UNKNOWN, "")
 
 
 async def main():
