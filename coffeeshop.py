@@ -35,7 +35,8 @@ class ConversationAI:
 
     async def guest_agent(self, messages):
         """Process guest messages and handle conversation flow"""
-        await self.guest_queue.put("Welcome to our coffee shop. What can I get you?")
+        # Send initial greeting through employee
+        await self.employee_queue.put("Welcome to our coffee shop. What can I get you?")
 
         done = False
         for msg in messages:
@@ -54,10 +55,6 @@ class ConversationAI:
         # Send final response if needed
         if not done:
             await self.guest_queue.put("That's all")
-        else:
-            # Get the final total response
-            employee_msg = await self.employee_queue.get()
-            print(f"Employee: {employee_msg}")
 
     async def employee_agent(self):
         """Handle employee responses and order logic"""
@@ -80,7 +77,7 @@ class ConversationAI:
                 # Clear queues to prevent hanging
                 while not self.guest_queue.empty():
                     await self.guest_queue.get()
-                await self.employee_queue.put(response)
+                print(f"Employee: {response}")
             else:
                 response = "I don't understand."
 
