@@ -2,22 +2,21 @@
 # -*- coding: utf-8 -*-
 import argparse
 import asyncio
-import sys
 import re
 from enum import Enum, auto
 
 import aiofiles
 
 # Menu configuration
-MENU = {
+MENU: dict[str, float] = {
     "americano": 1.51,
     "espresso": 1.27,
     "latte": 2.13,
     "macchiato": 3.39,
     "tea": 1.75,
-    "cookie": 0.50
+    "cookie": 0.50,
 }
-DRINKS = {"americano", "espresso", "latte", "macchiato", "tea"}
+DRINKS: set[str] = {"americano", "espresso", "latte", "macchiato", "tea"}
 COOKIE_PRICE = MENU["cookie"]
 
 class OrderAction(Enum):
@@ -27,20 +26,22 @@ class OrderAction(Enum):
     UNKNOWN = auto()
 
 class ConversationAI:
-    def __init__(self):
+    def __init__(self) -> None:
+        self.employee_queue: asyncio.Queue[str] = asyncio.Queue()
+        self.guest_queue: asyncio.Queue[str] = asyncio.Queue()
+        self.order: list[str] = []
+        self.upsell_attempted: bool = False
+        self.conversation_active: bool = True
         self.employee_queue = asyncio.Queue()
         self.guest_queue = asyncio.Queue()
-        self.order = []
-        self.upsell_attempted = False
-        self.conversation_active = True
 
-    async def guest_agent(self, filepath):
+    async def guest_agent(self, filepath: str) -> None:
         """Process guest messages and handle conversation flow"""
         # Send initial greeting through employee
         await self.employee_queue.put("Welcome to our coffee shop. What can I get you?")
 
         done = False
-        async with aiofiles.open(filepath, mode='r') as f:
+        async with aiofiles.open(filepath) as f:
             async for msg in f:
                 employee_msg = await self.employee_queue.get()
                 print(f"Employee: {employee_msg}")
@@ -58,7 +59,7 @@ class ConversationAI:
         if not done:
             await self.guest_queue.put("That's all")
 
-    async def employee_agent(self):
+    async def employee_agent(self) -> None:
         """Handle employee responses and order logic"""
         while self.conversation_active:
             guest_msg = await self.guest_queue.get()
@@ -85,7 +86,7 @@ class ConversationAI:
 
             await self.employee_queue.put(response)
 
-    def handle_upsell(self):
+    def handle_upsell(self) -> str | None:
         """Check if we should upsell cookies and return upsell message if appropriate"""
         if (any(item in DRINKS for item in self.order) and
             "cookie" not in self.order and
@@ -94,28 +95,28 @@ class ConversationAI:
             return f"Would you like to add a cookie for ${COOKIE_PRICE:.2f}?"
         return None
 
-    def parse_guest_message(self, message):
+    def parse_guest_message(self, message: str) -> tuple[OrderAction, str]:
         """Parse guest message into action and item"""
         message = message.lower().strip()
         if message.startswith("that's all"):
             return (OrderAction.FINALIZE, "")
         # Handle cookie responses with possible punctuation
-        if message.startswith("yes, please") or message.startswith("no, thank you"):
+        if message.startswith(("yes, please", "no, thank you")):
             if message.startswith("yes, please"):
                 return (OrderAction.ADD, "cookie")
             return (OrderAction.ADD, "")  # Empty action to trigger "anything else"
 
         parts = message.split()
         item = parts[-1].rstrip('?.')
-        if re.match(".*(?<!don't)\s+(want|like).*", message):
+        if re.match(r".*(?<!don't)\s+(want|like).*", message):
             return (OrderAction.ADD, item) if item in MENU else (OrderAction.ADD, "")
-        elif re.match(".*don't\s+(want|like).*", message):
+        elif re.match(r".*don't\s+(want|like).*", message):  # noqa:RET505
             return (OrderAction.REMOVE, item) if item in MENU else (OrderAction.ADD, "")
 
         return (OrderAction.UNKNOWN, "")
 
 
-async def main():
+async def main() -> None:
     parser = argparse.ArgumentParser(description='HiAuto Coffee Shop Conversation Simulator')
     parser.add_argument('file', nargs=1, help='Input file with guest messages')
     args = parser.parse_args()
