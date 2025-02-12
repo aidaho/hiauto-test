@@ -4,3 +4,4 @@ pylint-venv
 ruff
 python-lsp-server[all]
 mypy  # mypy --install-types
+types-aiofiles
