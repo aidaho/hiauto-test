@@ -3,6 +3,17 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# IDE files
+.sublime-project
+.sublime-workspace
+.projectile
+.dumbjump
+.DS_Store
+.mypy_cache
+.vscode
+.aider*
+pyrightconfig.json
+
 # C extensions
 *.so
 
