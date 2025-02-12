@@ -33,24 +33,25 @@ class ConversationAI:
         self.upsell_attempted = False
         self.conversation_active = True
 
-    async def guest_agent(self, messages):
+    async def guest_agent(self, filepath):
         """Process guest messages and handle conversation flow"""
         # Send initial greeting through employee
         await self.employee_queue.put("Welcome to our coffee shop. What can I get you?")
 
         done = False
-        for msg in messages:
-            employee_msg = await self.employee_queue.get()
-            print(f"Employee: {employee_msg}")
+        async with aiofiles.open(filepath, mode='r') as f:
+            async for msg in f:
+                employee_msg = await self.employee_queue.get()
+                print(f"Employee: {employee_msg}")
 
-            # Process guest response
-            print(f"Guest: {msg}")
-            await self.guest_queue.put(msg)
+                # Process guest response
+                print(f"Guest: {msg.strip()}")
+                await self.guest_queue.put(msg.strip())
 
-            # Check if conversation should continue
-            if msg.lower().strip().startswith("that's all"):
-                done = True
-                break
+                # Check if conversation should continue
+                if msg.lower().strip().startswith("that's all"):
+                    done = True
+                    break
 
         # Send final response if needed
         if not done:
@@ -112,25 +113,16 @@ class ConversationAI:
 
         return (OrderAction.ADD, "")
 
-async def read_input_file(path):
-    """Read input from files asynchronously"""
-    messages = []
-    async with aiofiles.open(path, mode='r') as f:
-        async for line in f:
-            messages.append(line.strip())
-    return messages
-
 
 async def main():
     parser = argparse.ArgumentParser(description='HiAuto Coffee Shop Conversation Simulator')
     parser.add_argument('file', nargs=1, help='Input file with guest messages')
     args = parser.parse_args()
 
-    messages = await read_input_file(args.file[0])
     ai = ConversationAI()
 
     tasks = [
-        asyncio.create_task(ai.guest_agent(messages)),
+        asyncio.create_task(ai.guest_agent(args.file[0])),
         asyncio.create_task(ai.employee_agent()),
     ]
 
