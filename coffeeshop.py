@@ -3,6 +3,7 @@
 import argparse
 import asyncio
 import sys
+import re
 from enum import Enum, auto
 
 import aiofiles
@@ -101,20 +102,15 @@ class ConversationAI:
             return (OrderAction.FINALIZE, "")
         # Handle cookie responses with possible punctuation
         if message.startswith("yes, please") or message.startswith("no, thank you"):
-            if message == "yes, please":
+            if message.startswith("yes, please"):
                 return (OrderAction.ADD, "cookie")
             return (OrderAction.ADD, "")  # Empty action to trigger "anything else"
 
         parts = message.split()
-        if len(parts) < 3:
-            return (OrderAction.ADD, "")  # Invalid format
-
-        action_word = parts[0]
         item = parts[-1].rstrip('?.')
-
-        if action_word in ("i'd", "i'll"):
+        if re.match(".*(?<!don't)\s+(want|like).*", message):
             return (OrderAction.ADD, item) if item in MENU else (OrderAction.ADD, "")
-        if action_word == "i":
+        elif re.match(".*don't\s+(want|like).*", message):
             return (OrderAction.REMOVE, item) if item in MENU else (OrderAction.ADD, "")
 
         return (OrderAction.ADD, "")
