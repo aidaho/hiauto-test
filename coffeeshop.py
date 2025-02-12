@@ -29,7 +29,7 @@ class ConversationAI:
     def __init__(self):
         self.employee_queue = asyncio.Queue()
         self.guest_queue = asyncio.Queue()
-        self.order = set()
+        self.order = []
         self.upsell_attempted = False
         self.conversation_active = True
 
@@ -66,11 +66,11 @@ class ConversationAI:
             action, item = self.parse_guest_message(guest_msg)
 
             if action == OrderAction.ADD:
-                if item:  # Only add valid items
-                    self.order.add(item)
+                if item:  # only add valid items
+                    self.order.append(item)
                 response = self.handle_upsell() or "Would you like anything else?"
             elif action == OrderAction.REMOVE:
-                self.order.discard(item)
+                self.order.remove(item)
                 response = "Would you like anything else?"
             elif action == OrderAction.FINALIZE:
                 valid_items = [item for item in self.order if item in MENU]
